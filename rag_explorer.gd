@@ -186,11 +186,15 @@ func _load_existing_indexes() -> void:
 func _apply_config(config: Dictionary) -> void:
 	var cfg := config.get("config", {})
 	
-	var raw_ignored_folders: Array[String] = cfg.get("ignored_folders", [".git", ".godot", "node_modules"])
+	var raw_ignored_folders: Array[String] = []
+	for f in cfg.get("ignored_folders", [".git", ".godot", "node_modules"]):
+		raw_ignored_folders.append(String(f))
 	var ignored_folders: Array[String] = []
 	for f in raw_ignored_folders:
 		ignored_folders.append(String(f))
-	var raw_ignored_files: Array[String] = cfg.get("ignored_files", [])
+	var raw_ignored_files: Array[String] = []
+	for f in cfg.get("ignored_files", []):
+		raw_ignored_files.append(String(f))
 	var ignored_files: Array[String] = []
 	for f in raw_ignored_files:
 		ignored_files.append(String(f))
