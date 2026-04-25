@@ -37,7 +37,7 @@ func generate_embedding(text: String) -> PackedFloat32Array:
 		push_error("Embedder: Request failed: " + str(response[1]))
 		return PackedFloat32Array()
 
-	var body := response[3].get_string_from_utf8()
+	var body: String = response[3].get_string_from_utf8()
 	var json := JSON.new()
 	var parse_result := json.parse(body)
 
