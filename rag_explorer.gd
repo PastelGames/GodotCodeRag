@@ -136,7 +136,6 @@ func _create_results_section(parent: VBoxContainer) -> void:
 
 	_results_container = ScrollContainer.new()
 	_results_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_results_container.size_flags_flags = Control.SIZE_EXPAND | Control.SIZE_FILL
 	_results_container.custom_minimum_size.y = 200
 	parent.add_child(_results_container)
 
@@ -187,8 +186,8 @@ func _load_existing_indexes() -> void:
 func _apply_config(config: Dictionary) -> void:
 	var cfg := config.get("config", {})
 
-	var ignored_folders: Array = cfg.get("ignored_folders", [".git", ".godot", "node_modules"])
-	var ignored_files: Array = cfg.get("ignored_files", [])
+	var ignored_folders: Array[String] = cfg.get("ignored_folders", [".git", ".godot", "node_modules"])
+	var ignored_files: Array[String] = cfg.get("ignored_files", [])
 	var chunk_size: int = cfg.get("chunk_size", 50)
 	var chunk_overlap: int = cfg.get("chunk_overlap", 10)
 	var top_k: int = cfg.get("top_k_default", 10)
