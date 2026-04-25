@@ -82,10 +82,8 @@ func _collect_files(dir: DirAccess, root_path: String) -> Array[String]:
 				file_name = dir.get_next()
 				continue
 
-			var ext := file_name.get_extension()
-			if ext.is_valid_extension():
-				if not full_path.is_valid_resource_path():
-					full_path = _make_resource_path(full_path, root_path)
+			var ext := "." + file_name.get_extension()
+			if ext in SUPPORTED_EXTENSIONS:
 				results.append(full_path)
 
 		file_name = dir.get_next()
@@ -137,7 +135,7 @@ func _extract_chunk_content(lines: Array[String], start: int, end: int) -> Strin
 	for i in range(start, min(end + 1, lines.size())):
 		chunk_lines.append(lines[i])
 
-	return String.join(_delimiter, chunk_lines)
+	return chunk_lines.join(_delimiter)
 
 func _make_resource_path(absolute_path: String, root_path: String) -> String:
 	var relative := absolute_path.trim_prefix(root_path)

@@ -1,5 +1,5 @@
 class_name Embedder
-extends RefCounted
+extends Node
 
 const DEFAULT_OLLAMA_URL := "http://localhost:11434"
 const EMBEDDING_MODEL := "nomic-embed-text"
@@ -65,15 +65,13 @@ func generate_embeddings_batch(texts: Array[String]) -> Array[PackedFloat32Array
 
 	for i in texts.size():
 		progress_updated.emit(i + 1, total)
-		results.append(generate_embedding(texts[i]))
+		results.append(await generate_embedding(texts[i]))
 
 	return results
 
-static func check_ollama_available(url: String = DEFAULT_OLLAMA_URL) -> bool:
+func check_ollama_available(url: String = DEFAULT_OLLAMA_URL) -> bool:
 	var http_request := HTTPRequest.new()
-
-	if Engine.get_main_loop().root:
-		Engine.get_main_loop().root.add_child(http_request)
+	add_child(http_request)
 
 	var check_url := "%s/api/tags" % url
 	var error := http_request.request(check_url, [], HTTPClient.METHOD_GET)

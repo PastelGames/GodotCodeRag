@@ -4,7 +4,7 @@ extends RefCounted
 static func get_index_file_path() -> String:
 	var project_path := ProjectSettings.get_setting("editor/external_path", "")
 	if project_path.is_empty():
-		project_path = OS.get_exe_path().get_base_dir()
+		project_path = OS.get_executable_path().get_base_dir()
 
 	var data_dir := project_path.path_join("data")
 	if not DirAccess.dir_exists_absolute(data_dir):

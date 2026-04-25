@@ -33,6 +33,7 @@ func _init() -> void:
 	_scanner = CodeScanner.new()
 	_embedder = Embedder.new()
 	_vector_store = VectorStore.new()
+	add_child(_embedder)
 
 func _ready() -> void:
 	_current_config = _data_manager.load_index()
@@ -224,7 +225,7 @@ func _on_index_pressed() -> void:
 
 	var project_dir := ProjectSettings.get_setting("editor/external_path", "")
 	if project_dir.is_empty():
-		project_dir = OS.get_exe_path().get_base_dir()
+		project_dir = OS.get_executable_path().get_base_dir()
 
 	print("Starting indexing of: " + project_dir)
 
@@ -359,7 +360,7 @@ func _on_copy_all_pressed() -> void:
 			result["content"]
 		])
 
-	var text := String.join("\n---\n", snippets)
+	var text := snippets.join("\n---\n")
 	DisplayServer.clipboard_put(text)
 
 func _on_copy_prompt_pressed() -> void:
@@ -375,7 +376,7 @@ func _on_copy_prompt_pressed() -> void:
 			result["content"]
 		])
 
-	var context := String.join("\n---\n", snippets)
+	var context := snippets.join("\n---\n")
 	var query := _search_input.text.strip_edges()
 
 	var prompt := "## Context\n%s\n\n## Query\n%s\n\n## Response" % [context, query]

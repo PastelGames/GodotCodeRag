@@ -19,8 +19,8 @@ func _init() -> void:
 	cancel_button_text = "Cancel"
 
 func _ready() -> void:
-	_confirmed.connect(_on_confirmed)
-	_canceled.connect(_on_canceled)
+	confirmed.connect(_on_confirmed)
+	canceled.connect(_on_canceled)
 
 	var scroll := ScrollContainer.new()
 	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -47,7 +47,7 @@ func _create_folder_input() -> void:
 
 	_ignored_folders_input = TextEdit.new()
 	_ignored_folders_input.custom_minimum_size = Vector2(0, 60)
-	_ignored_folders_input.wrap_mode = TextEdit.WRAP_MODE_DISABLED
+	_ignored_folders_input.wrap_mode = TextEdit.LINE_WRAP_NONE
 	_vbox.add_child(_ignored_folders_input)
 
 	var hint := Label.new()
@@ -62,7 +62,7 @@ func _create_file_input() -> void:
 
 	_ignored_files_input = TextEdit.new()
 	_ignored_files_input.custom_minimum_size = Vector2(0, 60)
-	_ignored_files_input.wrap_mode = TextEdit.WRAP_MODE_DISABLED
+	_ignored_files_input.wrap_mode = TextEdit.LINE_WRAP_NONE
 	_vbox.add_child(_ignored_files_input)
 
 	var hint := Label.new()
@@ -163,7 +163,7 @@ func get_config() -> Dictionary:
 	}
 
 func _array_to_text(arr: Array[String]) -> String:
-	return String.join("\n", arr)
+	return arr.join("\n")
 
 func _text_to_array(text: String) -> Array[String]:
 	var lines := text.split("\n", false)
