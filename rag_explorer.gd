@@ -242,7 +242,7 @@ func _on_index_pressed() -> void:
 		_progress_bar.value = i + 1
 		await get_tree().process_frame
 
-		var chunk := chunks[i]
+		var chunk: Dictionary = chunks[i]
 		var embedding := await _embedder.generate_embedding(chunk["content"])
 
 		if embedding.is_empty():
@@ -360,8 +360,12 @@ func _on_copy_all_pressed() -> void:
 			result["content"]
 		])
 
-	var text := snippets.join("\n---\n")
-	DisplayServer.clipboard_put(text)
+	var text: String = ""
+	for j in snippets.size():
+		if j > 0:
+			text += "\n---\n"
+		text += snippets[j]
+	DisplayServer.set_clipboard(text)
 
 func _on_copy_prompt_pressed() -> void:
 	if _current_results.is_empty():
@@ -376,11 +380,15 @@ func _on_copy_prompt_pressed() -> void:
 			result["content"]
 		])
 
-	var context := snippets.join("\n---\n")
+	var context: String = ""
+	for j in snippets.size():
+		if j > 0:
+			context += "\n---\n"
+		context += snippets[j]
 	var query := _search_input.text.strip_edges()
 
 	var prompt := "## Context\n%s\n\n## Query\n%s\n\n## Response" % [context, query]
-	DisplayServer.clipboard_put(prompt)
+	DisplayServer.set_clipboard(prompt)
 
 func _on_clear_pressed() -> void:
 	_vector_store.clear()

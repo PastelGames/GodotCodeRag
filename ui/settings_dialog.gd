@@ -163,7 +163,12 @@ func get_config() -> Dictionary:
 	}
 
 func _array_to_text(arr: Array[String]) -> String:
-	return arr.join("\n")
+	var result := ""
+	for i in arr.size():
+		if i > 0:
+			result += "\n"
+		result += arr[i]
+	return result
 
 func _text_to_array(text: String) -> Array[String]:
 	var lines := text.split("\n", false)
