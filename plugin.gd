@@ -6,7 +6,7 @@ var _dock: EditorDock
 var _rag_explorer: Control
 
 func _enter_tree() -> void:
-	_rag_explorer = preload("res://rag_explorer.gd").new()
+	_rag_explorer = preload("res://addons/godot_code_rag/rag_explorer.gd").new()
 	_dock = EditorDock.new()
 	_dock.add_child(_rag_explorer)
 	_dock.title = "RAG Explorer"
