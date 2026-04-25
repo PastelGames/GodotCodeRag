@@ -47,7 +47,7 @@ func _create_folder_input() -> void:
 
 	_ignored_folders_input = TextEdit.new()
 	_ignored_folders_input.custom_minimum_size = Vector2(0, 60)
-	_ignored_folders_input.wrap_mode = TextEdit.LINE_WRAPPING_DISABLED
+	_ignored_folders_input.wrap_mode = 0
 	_vbox.add_child(_ignored_folders_input)
 
 	var hint := Label.new()
@@ -62,7 +62,7 @@ func _create_file_input() -> void:
 
 	_ignored_files_input = TextEdit.new()
 	_ignored_files_input.custom_minimum_size = Vector2(0, 60)
-	_ignored_files_input.wrap_mode = TextEdit.LINE_WRAPPING_DISABLED
+	_ignored_files_input.wrap_mode = 0
 	_vbox.add_child(_ignored_files_input)
 
 	var hint := Label.new()
