@@ -130,12 +130,12 @@ func _chunk_file(file_path: String) -> Array[Dictionary]:
 	return chunks
 
 func _extract_chunk_content(lines: Array[String], start: int, end: int) -> String:
-	var chunk_lines: PackedStringArray = []
-
+	var result := ""
 	for i in range(start, min(end + 1, lines.size())):
-		chunk_lines.append(lines[i])
-
-	return chunk_lines.join(_delimiter)
+		if i > start:
+			result += _delimiter
+		result += lines[i]
+	return result
 
 func _make_resource_path(absolute_path: String, root_path: String) -> String:
 	var relative := absolute_path.trim_prefix(root_path)

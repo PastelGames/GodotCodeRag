@@ -6,8 +6,8 @@ static func get_index_file_path() -> String:
 	if project_path.is_empty():
 		project_path = OS.get_executable_path().get_base_dir()
 
-	var data_dir := project_path.path_join("data")
-	if not DirAccess.dir_exists_absolute(data_dir):
+	var data_dir: String = project_path.path_join("data")
+	if not DirAccess.open(data_dir):
 		DirAccess.make_dir_recursive_absolute(data_dir)
 
 	return data_dir.path_join("rag_index.yaml")
