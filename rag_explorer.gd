@@ -365,7 +365,7 @@ func _on_copy_all_pressed() -> void:
 		if j > 0:
 			text += "\n---\n"
 		text += snippets[j]
-	DisplayServer.clipboard_set_text(text)
+	DisplayServer.clipboard_set(text)
 
 func _on_copy_prompt_pressed() -> void:
 	if _current_results.is_empty():
@@ -388,7 +388,7 @@ func _on_copy_prompt_pressed() -> void:
 	var query := _search_input.text.strip_edges()
 
 	var prompt := "## Context\n%s\n\n## Query\n%s\n\n## Response" % [context, query]
-	DisplayServer.clipboard_set_text(prompt)
+	DisplayServer.clipboard_set(prompt)
 
 func _on_clear_pressed() -> void:
 	_vector_store.clear()
