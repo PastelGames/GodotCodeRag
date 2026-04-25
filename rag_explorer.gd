@@ -33,6 +33,7 @@ func _init() -> void:
 	_scanner = CodeScanner.new()
 	_embedder = Embedder.new()
 	_vector_store = VectorStore.new()
+	_data_manager = DataManager.new()
 	add_child(_embedder)
 
 func _ready() -> void:
