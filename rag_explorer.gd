@@ -30,6 +30,7 @@ var _current_config: Dictionary = {}
 var _is_indexing: bool = false
 
 func _init() -> void:
+	custom_minimum_size = Vector2(300, 400)
 	_scanner = CodeScanner.new()
 	_embedder = Embedder.new()
 	_vector_store = VectorStore.new()
@@ -45,6 +46,10 @@ func _ready() -> void:
 	_update_status()
 
 func _create_ui() -> void:
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(panel)
+
 	var main_vbox := VBoxContainer.new()
 	main_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main_vbox.add_theme_constant_override("separation", 8)
@@ -52,7 +57,7 @@ func _create_ui() -> void:
 	main_vbox.add_theme_constant_override("margin_left", 8)
 	main_vbox.add_theme_constant_override("margin_right", 8)
 	main_vbox.add_theme_constant_override("margin_bottom", 8)
-	add_child(main_vbox)
+	panel.add_child(main_vbox)
 
 	_create_header(main_vbox)
 	_create_search_section(main_vbox)

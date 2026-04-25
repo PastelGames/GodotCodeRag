@@ -6,6 +6,7 @@ var _rag_explorer: Control
 
 func _enter_tree() -> void:
 	_rag_explorer = preload("res://rag_explorer.gd").new()
+	add_child(_rag_explorer)
 	add_dock(_rag_explorer)
 
 func _exit_tree() -> void:
