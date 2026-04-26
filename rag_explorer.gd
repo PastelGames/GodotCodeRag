@@ -181,12 +181,14 @@ func _create_settings_dialog() -> void:
 	add_child(_settings_dialog)
 
 func _load_existing_indexes() -> void:
-	var indexes: Array = _current_config.get("indexes", [])
-	if indexes.is_empty():
-		return
+	var indexes_raw = _current_config.get("indexes", [])
+	if indexes_raw and typeof(indexes_raw) == TYPE_ARRAY:
+		var indexes: Array = indexes_raw
+		if indexes.is_empty():
+			return
 
-	_vector_store.load_from_data(indexes)
-	print("Loaded %d chunks from index" % _vector_store.get_chunk_count())
+		_vector_store.load_from_data(indexes)
+		print("Loaded %d chunks from index" % _vector_store.get_chunk_count())
 
 func _apply_config(config: Dictionary) -> void:
 	var cfg := config.get("config", {})
@@ -238,9 +240,7 @@ func _on_index_pressed() -> void:
 	_progress_bar.visible = true
 	_index_button.disabled = true
 
-	var project_dir := ProjectSettings.get_setting("editor/external_path", "")
-	if project_dir.is_empty():
-		project_dir = OS.get_executable_path().get_base_dir()
+	var project_dir := ProjectSettings.globalize_path("res://")
 
 	print("Starting indexing of: " + project_dir)
 
@@ -254,35 +254,30 @@ func _on_index_pressed() -> void:
 	var indexes: Array[Dictionary] = []
 
 	for i in total_chunks:
-		_progress_bar.value = i + 1
+		var chunk: Dictionary = chunks[i]
+		var embedding: PackedFloat32Array = await _embedder.generate_embedding(chunk["content"])
 		await get_tree().process_frame
 
-		var chunk: Dictionary = chunks[i]
-		var embedding := await _embedder.generate_embedding(chunk["content"])
+		_progress_bar.value = i + 1
 
-		if embedding.is_empty():
-			print("Failed to embed chunk %d" % i)
-			continue
-
-		var entry: Dictionary = {
-			"path": chunk["path"],
-			"chunk_id": chunk["chunk_id"],
-			"start_line": chunk["start_line"],
-			"end_line": chunk["end_line"],
-			"content": chunk["content"],
-			"embedding": Array(embedding)
-		}
-
-		indexes.append(entry)
-
-		_vector_store.add_chunk(
-			chunk["path"],
-			chunk["chunk_id"],
-			chunk["start_line"],
-			chunk["end_line"],
-			chunk["content"],
-			embedding
-		)
+		if not embedding.is_empty():
+			var entry: Dictionary = {
+				"path": chunk["path"],
+				"chunk_id": chunk["chunk_id"],
+				"start_line": chunk["start_line"],
+				"end_line": chunk["end_line"],
+				"content": chunk["content"],
+				"embedding": Array(embedding)
+			}
+			indexes.append(entry)
+			_vector_store.add_chunk(
+				chunk["path"],
+				chunk["chunk_id"],
+				chunk["start_line"],
+				chunk["end_line"],
+				chunk["content"],
+				embedding
+			)
 
 	_progress_bar.visible = false
 	_index_button.disabled = false
@@ -304,7 +299,7 @@ func _on_search_pressed() -> void:
 	if query.is_empty() or _vector_store.get_chunk_count() == 0:
 		return
 
-	var query_embedding := await _embedder.generate_embedding(query)
+	var query_embedding: PackedFloat32Array = await _embedder.generate_embedding(query)
 
 	if query_embedding.is_empty():
 		push_error("Failed to generate query embedding")
@@ -358,7 +353,10 @@ func _on_settings_pressed() -> void:
 	_settings_dialog.popup_centered()
 
 func _on_settings_saved(config: Dictionary) -> void:
+	_current_config["version"] = _current_config.get("version", "1.0")
 	_current_config["config"] = config.get("config", {})
+	_current_config["last_indexed"] = _current_config.get("last_indexed", "")
+	_current_config["indexes"] = _current_config.get("indexes", [])
 	_apply_config(_current_config)
 	_data_manager.save_index(_current_config)
 

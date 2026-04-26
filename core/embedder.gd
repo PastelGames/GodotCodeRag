@@ -1,8 +1,8 @@
 class_name Embedder
 extends Node
 
-const DEFAULT_OLLAMA_URL := "http://localhost:11434"
-const EMBEDDING_MODEL := "nomic-embed-text"
+const DEFAULT_OLLAMA_URL := "http://127.0.0.1:11434"
+const EMBEDDING_MODEL := "nomic-embed-text:latest"
 
 var _ollama_url: String = DEFAULT_OLLAMA_URL
 
@@ -13,6 +13,7 @@ func set_ollama_url(url: String) -> void:
 
 func generate_embedding(text: String) -> PackedFloat32Array:
 	var http_request := HTTPRequest.new()
+	http_request.timeout = 30
 	add_child(http_request)
 
 	var url := "%s/api/embeddings" % _ollama_url
@@ -26,15 +27,15 @@ func generate_embedding(text: String) -> PackedFloat32Array:
 
 	if error != OK:
 		push_error("Embedder: HTTP request failed with error: " + str(error))
-		http_request.free()
+		http_request.queue_free()
 		return PackedFloat32Array()
 
 	var response = await http_request.request_completed
 
-	http_request.free()
+	http_request.queue_free()
 
-	if response[1] != HTTPRequest.RESULT_SUCCESS:
-		push_error("Embedder: Request failed: " + str(response[1]))
+	if response[0] != HTTPRequest.RESULT_SUCCESS:
+		push_error("Embedder: Request failed: " + str(response[0]))
 		return PackedFloat32Array()
 
 	var body: String = response[3].get_string_from_utf8()
@@ -59,16 +60,6 @@ func generate_embedding(text: String) -> PackedFloat32Array:
 
 	return result
 
-func generate_embeddings_batch(texts: Array[String]) -> Array[PackedFloat32Array]:
-	var results: Array[PackedFloat32Array] = []
-	var total := texts.size()
-
-	for i in texts.size():
-		progress_updated.emit(i + 1, total)
-		results.append(await generate_embedding(texts[i]))
-
-	return results
-
 func check_ollama_available(url: String = DEFAULT_OLLAMA_URL) -> bool:
 	var http_request := HTTPRequest.new()
 	add_child(http_request)
@@ -77,10 +68,10 @@ func check_ollama_available(url: String = DEFAULT_OLLAMA_URL) -> bool:
 	var error := http_request.request(check_url, [], HTTPClient.METHOD_GET)
 
 	if error != OK:
-		http_request.free()
+		http_request.queue_free()
 		return false
 
 	var response = await http_request.request_completed
-	http_request.free()
+	http_request.queue_free()
 
 	return response[1] == HTTPRequest.RESULT_SUCCESS

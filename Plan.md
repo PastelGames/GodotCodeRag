@@ -21,7 +21,7 @@ addons/godot_rag/
 │   ├── vector_store.gd        # Vector DB + cosine search
 │   └── data_manager.gd       # YAML persistence
 └── ui/
-    └── settings_dialog.gd    # Ignore patterns + config
+	└── settings_dialog.gd    # Ignore patterns + config
 ```
 
 ---
@@ -47,20 +47,20 @@ addons/godot_rag/
 version: "1.0"
 config:
   ignored_folders:
-    - ".git"
-    - ".godot"
-    - "node_modules"
+	- ".git"
+	- ".godot"
+	- "node_modules"
   ignored_files: []
   chunk_size: 50
   chunk_overlap: 10
 last_indexed: "2026-04-25T12:00:00"
 indexes:
   - path: "res://scripts/player.gd"
-    chunk_id: 0
-    start_line: 1
-    end_line: 50
-    content: "..."
-    embedding: [0.1, 0.2, ...]
+	chunk_id: 0
+	start_line: 1
+	end_line: 50
+	content: "..."
+	embedding: [0.1, 0.2, ...]
 ```
 
 ### 3. UI Components
@@ -135,7 +135,7 @@ indexes:
 | `chunk_size` | int | 50 |
 | `chunk_overlap` | int | 10 |
 | `top_k_default` | int | 10 |
-| `ollama_url` | String | `"http://localhost:11434"` |
+| `ollama_url` | String | `"http://127.0.0.1:11434"` |
 
 ---
 

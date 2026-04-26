@@ -36,7 +36,6 @@ func scan_directory(root_path: String) -> Array[Dictionary]:
 		return results
 
 	dir.include_hidden = false
-	dir.include_access_reversed = false
 
 	var all_files := _collect_files(dir, root_path)
 	var total_files := all_files.size()

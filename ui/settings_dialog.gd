@@ -162,17 +162,17 @@ func get_config() -> Dictionary:
 		}
 	}
 
-func _array_to_text(arr: Array[String]) -> String:
+func _array_to_text(arr: Array) -> String:
 	var result := ""
 	for i in arr.size():
 		if i > 0:
 			result += "\n"
-		result += arr[i]
+		result += str(arr[i])
 	return result
 
-func _text_to_array(text: String) -> Array[String]:
+func _text_to_array(text: String) -> Array:
 	var lines := text.split("\n", false)
-	var result: Array[String] = []
+	var result: Array = []
 	for line in lines:
 		var trimmed := line.strip_edges()
 		if not trimmed.is_empty():
