@@ -7,7 +7,7 @@ var _ignored_folders: Array[String] = [".git", ".godot", "node_modules"]
 var _ignored_files: Array[String] = []
 var _chunk_size: int = 50
 var _chunk_overlap: int = 10
-var _delimiter: String = " "
+var _delimiter: String = "\n"
 
 signal progress_updated(current: int, total: int, file_path: String)
 

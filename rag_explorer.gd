@@ -1,4 +1,4 @@
-class_name RAGExplorer
+class_name RAGExplorerUI
 extends Control
 
 signal indexing_progress(current: int, total: int, file: String)
@@ -75,7 +75,7 @@ func _create_header(parent: VBoxContainer) -> void:
 
 	_settings_button = Button.new()
 	_settings_button.text = "Settings"
-	_settings_button.pressed.connect(_on_settings_pressed)
+	_settings_button.pressed.connect(_on_settings_button_pressed)
 	hbox.add_child(_settings_button)
 
 	parent.add_child(hbox)
@@ -112,7 +112,7 @@ func _create_search_section(parent: VBoxContainer) -> void:
 	_top_k_spin.min_value = 1
 	_top_k_spin.max_value = 50
 	_top_k_spin.value = DEFAULT_TOP_K
-	_top_k_spin.value_changed.connect(_on_top_k_changed)
+	_top_k_spin.value_changed.connect(_on_top_k_changed_spin)
 	controls_hbox.add_child(_top_k_spin)
 
 	controls_hbox.add_child(Control.new())
@@ -154,17 +154,17 @@ func _create_action_buttons(parent: VBoxContainer) -> void:
 
 	_copy_all_button = Button.new()
 	_copy_all_button.text = "Copy All"
-	_copy_all_button.pressed.connect(_on_copy_all_pressed)
+	_copy_all_button.pressed.connect(_on_copy_all_button_pressed)
 	hbox.add_child(_copy_all_button)
 
 	_copy_prompt_button = Button.new()
 	_copy_prompt_button.text = "Copy Prompt"
-	_copy_prompt_button.pressed.connect(_on_copy_prompt_pressed)
+	_copy_prompt_button.pressed.connect(_on_copy_prompt_button_pressed)
 	hbox.add_child(_copy_prompt_button)
 
 	_clear_button = Button.new()
 	_clear_button.text = "Clear"
-	_clear_button.pressed.connect(_on_clear_pressed)
+	_clear_button.pressed.connect(_on_clear_button_pressed)
 	hbox.add_child(_clear_button)
 
 	hbox.add_child(Control.new())
@@ -183,7 +183,7 @@ func _create_settings_dialog() -> void:
 func _load_existing_indexes() -> void:
 	var indexes_raw = _current_config.get("indexes", [])
 	if indexes_raw and typeof(indexes_raw) == TYPE_ARRAY:
-		var indexes: Array = indexes_raw
+		var indexes = indexes_raw as Array
 		if indexes.is_empty():
 			return
 
@@ -239,6 +239,9 @@ func _on_index_pressed() -> void:
 	_is_indexing = true
 	_progress_bar.visible = true
 	_index_button.disabled = true
+	
+	_vector_store.clear()
+	_current_config["indexes"] = []
 
 	var project_dir := ProjectSettings.globalize_path("res://")
 
@@ -319,38 +322,121 @@ func _display_results() -> void:
 		var item := _create_result_item(result)
 		_results_vbox.add_child(item)
 
+func _on_toggle_pressed(btn: Button, panel: Control) -> void:
+	panel.visible = not panel.visible
+	if panel.visible and panel.get_child_count() > 0:
+		panel.get_child(0).visible = true
+	btn.text = "v" if panel.visible else ">"
+
 func _create_result_item(result: Dictionary) -> Control:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size.y = 80
+	panel.custom_minimum_size.y = 36
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
+	vbox.add_theme_constant_override("separation", 2)
 	panel.add_child(vbox)
 
+	var header_hbox := HBoxContainer.new()
+	header_hbox.add_theme_constant_override("separation", 6)
+	vbox.add_child(header_hbox)
+
+	var toggle_btn := Button.new()
+	toggle_btn.text = ">"
+	toggle_btn.custom_minimum_size.x = 24
+	toggle_btn.custom_minimum_size.y = 28
+	header_hbox.add_child(toggle_btn)
+
 	var header := Label.new()
-	header.text = "%s:%d-%d (%.3f)" % [
-		result["path"],
-		result["start_line"],
-		result["end_line"],
-		result["similarity"]
-	]
-	header.add_theme_font_size_override("font_size", 12)
-	vbox.add_child(header)
+	header.text = "%s:%d-%d (%.3f)" % [result["path"], result["start_line"], result["end_line"], result["similarity"]]
+	header.add_theme_font_size_override("font_size", 11)
+	header.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.custom_minimum_size.y = 24
+	header_hbox.add_child(header)
+
+	var copy_btn := Button.new()
+	copy_btn.text = "Copy"
+	copy_btn.custom_minimum_size.x = 50
+	copy_btn.custom_minimum_size.y = 28
+	header_hbox.add_child(copy_btn)
+
+	var content_text: String = result.get("content", "")
+	if content_text.is_empty():
+		content_text = "EMPTY"
+
+	var content_panel := PanelContainer.new()
+	content_panel.custom_minimum_size.y = 100
+	content_panel.add_theme_stylebox_override("panel", _create_snippet_style())
+	content_panel.visible = false
+	vbox.add_child(content_panel)
 
 	var content_label := Label.new()
-	content_label.text = result["content"].left(200)
+	content_label.text = content_text
+	content_label.add_theme_font_size_override("font_size", 11)
+	content_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 	content_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(content_label)
+	content_label.custom_minimum_size.y = 96
+	content_label.visible = false
+	content_panel.add_child(content_label)
+
+	toggle_btn.pressed.connect(_on_toggle_pressed.bind(toggle_btn, content_panel))
+	copy_btn.pressed.connect(_on_copy_snippet_pressed.bind(content_text, result))
 
 	return panel
 
-func _on_top_k_changed(_value: float) -> void:
-	pass
+func _create_snippet_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.12, 0.14)
+	style.set_corner_radius_all(4)
+	style.set_content_margin_all(8)
+	return style
 
-func _on_settings_pressed() -> void:
+func _on_copy_snippet_pressed(content: String, result: Dictionary) -> void:
+	var snippet = result["path"] + ":" + str(result["start_line"]) + "-" + str(result["end_line"]) + "\n" + content
+	DisplayServer.clipboard_set(snippet)
+
+func _on_settings_button_pressed() -> void:
 	_settings_dialog.load_config(_current_config)
 	_settings_dialog.popup_centered()
+
+func _on_top_k_changed_spin(_value: float) -> void:
+	pass
+
+func _on_copy_all_button_pressed() -> void:
+	if _current_results.is_empty():
+		return
+	var snippets = []
+	for result in _current_results:
+		snippets.append(result["path"] + ":" + str(result["start_line"]) + "-" + str(result["end_line"]) + "\n" + result["content"])
+	var text = ""
+	for j in snippets.size():
+		if j > 0:
+			text += "\n---\n"
+		text += snippets[j]
+	DisplayServer.clipboard_set(text)
+
+func _on_copy_prompt_button_pressed() -> void:
+	if _current_results.is_empty():
+		return
+	var context = ""
+	for j in _current_results.size():
+		if j > 0:
+			context += "\n---\n"
+		context += _current_results[j]["path"] + ":" + str(_current_results[j]["start_line"]) + "-" + str(_current_results[j]["end_line"]) + "\n" + _current_results[j]["content"]
+	var query = _search_input.text.strip_edges()
+	var prompt = "## Context\n" + context + "\n\n## Query\n" + query + "\n\n## Response"
+	DisplayServer.clipboard_set(prompt)
+
+func _on_clear_button_pressed() -> void:
+	_vector_store.clear()
+	_current_config["indexes"] = []
+	_current_config["last_indexed"] = ""
+	_data_manager.save_index(_current_config)
+	_current_results.clear()
+	for child in _results_vbox.get_children():
+		child.queue_free()
+	_update_status()
 
 func _on_settings_saved(config: Dictionary) -> void:
 	_current_config["version"] = _current_config.get("version", "1.0")
@@ -359,58 +445,3 @@ func _on_settings_saved(config: Dictionary) -> void:
 	_current_config["indexes"] = _current_config.get("indexes", [])
 	_apply_config(_current_config)
 	_data_manager.save_index(_current_config)
-
-func _on_copy_all_pressed() -> void:
-	if _current_results.is_empty():
-		return
-
-	var snippets: PackedStringArray = []
-	for result in _current_results:
-		snippets.append("%s:%d-%d\n%s" % [
-			result["path"],
-			result["start_line"],
-			result["end_line"],
-			result["content"]
-		])
-
-	var text: String = ""
-	for j in snippets.size():
-		if j > 0:
-			text += "\n---\n"
-		text += snippets[j]
-	DisplayServer.clipboard_set(text)
-
-func _on_copy_prompt_pressed() -> void:
-	if _current_results.is_empty():
-		return
-
-	var snippets: PackedStringArray = []
-	for result in _current_results:
-		snippets.append("%s:%d-%d\n%s" % [
-			result["path"],
-			result["start_line"],
-			result["end_line"],
-			result["content"]
-		])
-
-	var context: String = ""
-	for j in snippets.size():
-		if j > 0:
-			context += "\n---\n"
-		context += snippets[j]
-	var query := _search_input.text.strip_edges()
-
-	var prompt := "## Context\n%s\n\n## Query\n%s\n\n## Response" % [context, query]
-	DisplayServer.clipboard_set(prompt)
-
-func _on_clear_pressed() -> void:
-	_vector_store.clear()
-	_current_config["indexes"] = []
-	_current_config["last_indexed"] = ""
-	_data_manager.save_index(_current_config)
-	_current_results.clear()
-
-	for child in _results_vbox.get_children():
-		child.queue_free()
-
-	_update_status()

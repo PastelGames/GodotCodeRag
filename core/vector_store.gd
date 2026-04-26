@@ -9,12 +9,12 @@ class ChunkEntry extends RefCounted:
 	var content: String
 	var embedding: PackedFloat32Array
 
-	func _init(p := "", cid := 0, start := 0, end_line := 0, content := "", embed := PackedFloat32Array()) -> void:
+	func _init(p := "", cid := 0, start := 0, endLine := 0, txt := "", embed := PackedFloat32Array()) -> void:
 		path = p
 		chunk_id = cid
 		start_line = start
-		end_line = end_line
-		content = content
+		end_line = endLine
+		content = txt
 		embedding = embed
 
 var _chunks: Array[ChunkEntry] = []
@@ -53,7 +53,7 @@ func get_chunk_count() -> int:
 func get_chunks() -> Array[ChunkEntry]:
 	return _chunks
 
-func load_from_data(indexes: Array[Dictionary]) -> void:
+func load_from_data(indexes: Array) -> void:
 	_chunks.clear()
 
 	for entry in indexes:
