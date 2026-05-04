@@ -8,19 +8,21 @@ class ChunkEntry extends RefCounted:
 	var end_line: int
 	var content: String
 	var embedding: PackedFloat32Array
+	var mtime: int
 
-	func _init(p := "", cid := 0, start := 0, endLine := 0, txt := "", embed := PackedFloat32Array()) -> void:
+	func _init(p := "", cid := 0, start := 0, endLine := 0, txt := "", embed := PackedFloat32Array(), mt := 0) -> void:
 		path = p
 		chunk_id = cid
 		start_line = start
 		end_line = endLine
 		content = txt
 		embedding = embed
+		mtime = mt
 
 var _chunks: Array[ChunkEntry] = []
 
-func add_chunk(path: String, chunk_id: int, start_line: int, end_line: int, content: String, embedding: PackedFloat32Array) -> void:
-	var entry := ChunkEntry.new(path, chunk_id, start_line, end_line, content, embedding)
+func add_chunk(path: String, chunk_id: int, start_line: int, end_line: int, content: String, embedding: PackedFloat32Array, mtime: int = 0) -> void:
+	var entry := ChunkEntry.new(path, chunk_id, start_line, end_line, content, embedding, mtime)
 	_chunks.append(entry)
 
 func search(query_embedding: PackedFloat32Array, top_k: int) -> Array[Dictionary]:
@@ -47,6 +49,9 @@ func search(query_embedding: PackedFloat32Array, top_k: int) -> Array[Dictionary
 func clear() -> void:
 	_chunks.clear()
 
+func remove_chunks_by_path(file_path: String) -> void:
+	_chunks = _chunks.filter(func(chunk): return chunk.path != file_path)
+
 func get_chunk_count() -> int:
 	return _chunks.size()
 
@@ -65,13 +70,18 @@ func load_from_data(indexes: Array) -> void:
 		for val in embed_array:
 			embedding.append(float(val))
 
+		var mt: int = 0
+		if entry.has("mtime"):
+			mt = int(entry["mtime"])
+
 		add_chunk(
 			entry["path"],
 			entry["chunk_id"],
 			entry["start_line"],
 			entry["end_line"],
 			entry["content"],
-			embedding
+			embedding,
+			mt
 		)
 
 func to_data() -> Array[Dictionary]:
@@ -84,7 +94,8 @@ func to_data() -> Array[Dictionary]:
 			"start_line": chunk.start_line,
 			"end_line": chunk.end_line,
 			"content": chunk.content,
-			"embedding": Array(chunk.embedding)
+			"embedding": Array(chunk.embedding),
+			"mtime": chunk.mtime
 		})
 
 	return results

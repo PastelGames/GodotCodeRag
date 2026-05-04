@@ -1,7 +1,7 @@
 class_name CodeScanner
 extends RefCounted
 
-const SUPPORTED_EXTENSIONS := [".gd", ".tscn", ".tres", ".shader", ".gdshader", ".gml", ".cfg", ".ini", ".json", ".md", ".txt", ".yaml", ".yml"]
+const SUPPORTED_EXTENSIONS := [".gd", ".tscn", ".tres", ".shader", ".gdshader", ".gml", ".cfg", ".ini", ".json", ".md", ".txt", ".yaml", ".yml", ".canvas"]
 
 var _ignored_folders: Array[String] = [".git", ".godot", "node_modules"]
 var _ignored_files: Array[String] = []
@@ -26,6 +26,14 @@ func set_chunk_size(size: int) -> void:
 
 func set_chunk_overlap(overlap: int) -> void:
 	_chunk_overlap = overlap
+
+func get_file_list(root_path: String) -> Array[String]:
+	var dir := DirAccess.open(root_path)
+	if dir == null:
+		push_error("CodeScanner: Cannot open directory: " + root_path)
+		return []
+	dir.include_hidden = false
+	return _collect_files(dir, root_path)
 
 func scan_directory(root_path: String) -> Array[Dictionary]:
 	var results: Array[Dictionary] = []
@@ -90,13 +98,15 @@ func _collect_files(dir: DirAccess, root_path: String) -> Array[String]:
 	dir.list_dir_end()
 	return results
 
-func _chunk_file(file_path: String) -> Array[Dictionary]:
+func chunk_file(file_path: String) -> Array[Dictionary]:
 	var chunks: Array[Dictionary] = []
 	var file := FileAccess.open(file_path, FileAccess.READ)
 
 	if file == null:
 		push_error("CodeScanner: Cannot read file: " + file_path)
 		return chunks
+
+	var mtime := FileAccess.get_modified_time(file_path)
 
 	var lines: Array[String] = []
 	while not file.eof_reached():
@@ -110,7 +120,6 @@ func _chunk_file(file_path: String) -> Array[Dictionary]:
 
 	var total_lines := lines.size()
 	var start_line := 1
-	var line_num := 1
 
 	while start_line <= total_lines:
 		var end_line := min(start_line + _chunk_size - 1, total_lines)
@@ -119,7 +128,8 @@ func _chunk_file(file_path: String) -> Array[Dictionary]:
 		chunks.append({
 			"start_line": start_line,
 			"end_line": end_line,
-			"content": chunk_content
+			"content": chunk_content,
+			"mtime": mtime
 		})
 
 		start_line += _chunk_size - _chunk_overlap
@@ -127,6 +137,10 @@ func _chunk_file(file_path: String) -> Array[Dictionary]:
 			start_line = 1
 
 	return chunks
+
+
+func _chunk_file(file_path: String) -> Array[Dictionary]:
+	return chunk_file(file_path)
 
 func _extract_chunk_content(lines: Array[String], start: int, end: int) -> String:
 	var result := ""

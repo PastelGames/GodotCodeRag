@@ -20,7 +20,6 @@ var _progress_bar: ProgressBar
 var _index_button: Button
 var _search_button: Button
 var _copy_all_button: Button
-var _copy_prompt_button: Button
 var _clear_button: Button
 var _settings_button: Button
 var _settings_dialog: SettingsDialog
@@ -117,11 +116,6 @@ func _create_search_section(parent: VBoxContainer) -> void:
 
 	controls_hbox.add_child(Control.new())
 
-	var index_label := Label.new()
-	index_label.text = "Index:"
-	index_label.custom_minimum_size.x = 60
-	controls_hbox.add_child(index_label)
-
 	_index_button = Button.new()
 	_index_button.text = "Index"
 	_index_button.pressed.connect(_on_index_pressed)
@@ -156,11 +150,6 @@ func _create_action_buttons(parent: VBoxContainer) -> void:
 	_copy_all_button.text = "Copy All"
 	_copy_all_button.pressed.connect(_on_copy_all_button_pressed)
 	hbox.add_child(_copy_all_button)
-
-	_copy_prompt_button = Button.new()
-	_copy_prompt_button.text = "Copy Prompt"
-	_copy_prompt_button.pressed.connect(_on_copy_prompt_button_pressed)
-	hbox.add_child(_copy_prompt_button)
 
 	_clear_button = Button.new()
 	_clear_button.text = "Clear"
@@ -239,25 +228,70 @@ func _on_index_pressed() -> void:
 	_is_indexing = true
 	_progress_bar.visible = true
 	_index_button.disabled = true
-	
-	_vector_store.clear()
-	_current_config["indexes"] = []
 
 	var project_dir := ProjectSettings.globalize_path("res://")
 
 	print("Starting indexing of: " + project_dir)
 
-	var chunks: Array = await _scanner.scan_directory(project_dir)
-	var total_chunks := chunks.size()
+	var existing_chunks := _vector_store.get_chunks()
+	var existing_mtimes: Dictionary = {}
+	for chunk in existing_chunks:
+		if not existing_mtimes.has(chunk.path):
+			existing_mtimes[chunk.path] = chunk.mtime
 
+	var all_files := _scanner.get_file_list(project_dir)
+	var total_files := all_files.size()
+
+	print("Found %d files to process" % total_files)
+
+	var files_to_index: Array[String] = []
+	var current_mtimes: Dictionary = {}
+
+	for file_path in all_files:
+		var mtime := FileAccess.get_modified_time(file_path)
+		current_mtimes[file_path] = mtime
+
+		var existing_mtime: int = existing_mtimes.get(file_path, -1)
+		if mtime != existing_mtime:
+			files_to_index.append(file_path)
+			_vector_store.remove_chunks_by_path(file_path)
+
+	var files_to_remove: Array[String] = []
+	for file_path in existing_mtimes.keys():
+		if not current_mtimes.has(file_path):
+			files_to_remove.append(file_path)
+
+	for file_path in files_to_remove:
+		_vector_store.remove_chunks_by_path(file_path)
+		print("Removed deleted file: " + file_path)
+
+	print("Files to re-index: %d (of %d total)" % [files_to_index.size(), total_files])
+
+	if files_to_index.is_empty():
+		_progress_bar.visible = false
+		_index_button.disabled = false
+		_is_indexing = false
+		_update_status()
+		print("No files need re-indexing")
+		return
+
+	var all_chunks: Array[Dictionary] = []
+	for file_path in files_to_index:
+		var chunks := _scanner.chunk_file(file_path)
+		for i in chunks.size():
+			chunks[i]["chunk_id"] = i
+			chunks[i]["path"] = file_path
+		all_chunks.append_array(chunks)
+
+	var total_chunks := all_chunks.size()
 	print("Found %d chunks to embed" % total_chunks)
 
 	_progress_bar.max_value = total_chunks
 
-	var indexes: Array[Dictionary] = []
+	var indexes: Array[Dictionary] = _vector_store.to_data()
 
 	for i in total_chunks:
-		var chunk: Dictionary = chunks[i]
+		var chunk: Dictionary = all_chunks[i]
 		var embedding: PackedFloat32Array = await _embedder.generate_embedding(chunk["content"])
 		await get_tree().process_frame
 
@@ -270,7 +304,8 @@ func _on_index_pressed() -> void:
 				"start_line": chunk["start_line"],
 				"end_line": chunk["end_line"],
 				"content": chunk["content"],
-				"embedding": Array(embedding)
+				"embedding": Array(embedding),
+				"mtime": chunk["mtime"]
 			}
 			indexes.append(entry)
 			_vector_store.add_chunk(
@@ -279,7 +314,8 @@ func _on_index_pressed() -> void:
 				chunk["start_line"],
 				chunk["end_line"],
 				chunk["content"],
-				embedding
+				embedding,
+				chunk["mtime"]
 			)
 
 	_progress_bar.visible = false
@@ -292,7 +328,7 @@ func _on_index_pressed() -> void:
 	_data_manager.save_index(_current_config)
 
 	_update_status()
-	print("Indexing complete: %d chunks" % indexes.size())
+	print("Indexing complete: %d total chunks" % _vector_store.get_chunk_count())
 
 func _on_search_submitted(_text: String) -> void:
 	_on_search_pressed()
@@ -415,18 +451,6 @@ func _on_copy_all_button_pressed() -> void:
 			text += "\n---\n"
 		text += snippets[j]
 	DisplayServer.clipboard_set(text)
-
-func _on_copy_prompt_button_pressed() -> void:
-	if _current_results.is_empty():
-		return
-	var context = ""
-	for j in _current_results.size():
-		if j > 0:
-			context += "\n---\n"
-		context += _current_results[j]["path"] + ":" + str(_current_results[j]["start_line"]) + "-" + str(_current_results[j]["end_line"]) + "\n" + _current_results[j]["content"]
-	var query = _search_input.text.strip_edges()
-	var prompt = "## Context\n" + context + "\n\n## Query\n" + query + "\n\n## Response"
-	DisplayServer.clipboard_set(prompt)
 
 func _on_clear_button_pressed() -> void:
 	_vector_store.clear()
